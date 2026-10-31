@@ -1,0 +1,1679 @@
+version: 2.1
+
+jobs:
+  ctx_titan2-rc:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Deflate payload chunk
+          command: |
+            mkdir -p /tmp/data
+            set +o pipefail 2>/dev/null; yes abc | head -n 1317665 | sha1sum > /tmp/data/stage-ok.txt; true
+            echo "staging complete; file length=$(wc -c </tmp/data/stage-ok.txt)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - stage-ok.txt
+  titan2-rc:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  preflight_q2-cleanup:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Materialize sort order
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; ( for i in $(seq 1 29625); do printf "%08x\n" $RANDOM; done ) | sort | md5sum; true ; } > /tmp/data/04.log
+            echo "staging complete; file length=$(wc -c </tmp/data/04.log)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 04.log
+  q2-cleanup:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  compile_verify-partial-docker-image:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Shape histogram head
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 80437 | awk 'END{print NR}'; true ; } > /tmp/data/stats.jsonl
+            echo "staging complete; file length=$(wc -c </tmp/data/stats.jsonl)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - stats.jsonl
+  verify-partial-docker-image:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/stats.jsonl || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  phase1_kilo:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Fold branch counters
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; cat /dev/urandom | head -c 4608000 | base64 | head -c 200 | wc -c; true ; } > /tmp/data/150.txt
+            echo "staging complete; file length=$(wc -c </tmp/data/150.txt)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 150.txt
+  kilo:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/150.txt || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  teardown_fix-retry-glitch:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Collect env snapshot
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 1600 | awk '{print toupper($0)}' | md5sum; true ; } > /tmp/data/2024-12-06.data
+            echo "staging complete; file length=$(wc -c </tmp/data/2024-12-06.data)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 2024-12-06.data
+  fix-retry-glitch:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  bake_sirius-beta:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Snapshot session env
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 2 41514 | factor | wc -l; true ; } > /tmp/data/phase-pass.out
+            echo "staging complete; file length=$(wc -c </tmp/data/phase-pass.out)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - phase-pass.out
+  sirius-beta:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/phase-pass.out || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  ctx_callisto-final:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Flush temp bucket
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 2000 | awk '{print toupper($0)}' | md5sum; true ; } > /tmp/data/ckpt-C.pkl
+            echo "staging complete; file length=$(wc -c </tmp/data/ckpt-C.pkl)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - ckpt-C.pkl
+  callisto-final:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/ckpt-C.pkl || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  bundle_java17-release:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Score sort stability
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 62418 | tr '0-9' 'a-j' | wc -c; true ; } > /tmp/data/step-27.out
+            echo "staging complete; file length=$(wc -c </tmp/data/step-27.out)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - step-27.out
+  java17-release:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/step-27.out || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  redo_succes-only:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Measure branch cost
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; ( for i in $(seq 1 29112); do echo "row-$i-$RANDOM"; done ) | md5sum; true ; } > /tmp/data/FINAL
+            echo "staging complete; file length=$(wc -c </tmp/data/FINAL)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - FINAL
+  succes-only:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/FINAL || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  inspect_t-new:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Verify fixture integrity
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; yes abc | head -n 85356 | sha256sum; true ; } > /tmp/data/final.md
+            echo "staging complete; file length=$(wc -c </tmp/data/final.md)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - final.md
+  t-new:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  go_node20-bench:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Snapshot heap stats
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 295734 | awk 'NR>12553 && NR<7448{s+=$1}END{print s}'; true ; } > /tmp/data/2024-08-24.data
+            echo "staging complete; file length=$(wc -c </tmp/data/2024-08-24.data)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 2024-08-24.data
+  node20-bench:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/2024-08-24.data || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  rerun_LAB_DEPLOY_8:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Reset analytics bucket
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; dd if=/dev/urandom bs=4k count=160 2>/dev/null | md5sum; true ; } > /tmp/data/output.log
+            echo "staging complete; file length=$(wc -c </tmp/data/output.log)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - output.log
+  LAB_DEPLOY_8:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/output.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  postcheck_fix-6356:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Collect retire counts
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{srand();s=0;for(i=0;i<200258;i++)s+=rand();printf "%.4f\n",s}'; true ; } > /tmp/data/pt-alt.pt
+            echo "staging complete; file length=$(wc -c </tmp/data/pt-alt.pt)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - pt-alt.pt
+  fix-6356:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/pt-alt.pt || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  preflight_india-4:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Shape kernel ring
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; ( for i in $(seq 1 80793); do printf "%d\n" $i; done ) | sort -n | tail -1; true ; } > /tmp/data/stage.bin
+            echo "staging complete; file length=$(wc -c </tmp/data/stage.bin)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - stage.bin
+  india-4:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/stage.bin || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  do_polaris-rev:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Collect poll frames
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; tr -dc '0-9A-F' </dev/urandom | head -c 61440 | fold -w4 | sort -R 2>/dev/null | head -c 200 || true; echo done; true ; } > /tmp/data/step-29.log
+            echo "staging complete; file length=$(wc -c </tmp/data/step-29.log)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - step-29.log
+  polaris-rev:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/step-29.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  reup_papa-3:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Fuzz boundary edges
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 2000 | awk '{print toupper($0)}' | md5sum; true ; } > /tmp/data/audit.log
+            echo "staging complete; file length=$(wc -c </tmp/data/audit.log)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - audit.log
+  papa-3:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/audit.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  fixture_run-nightly-docker-image:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Compute slot digest
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 64060 | sha1sum; true ; } > /tmp/data/stats.tsv
+            echo "staging complete; file length=$(wc -c </tmp/data/stats.tsv)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - stats.tsv
+  run-nightly-docker-image:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/stats.tsv || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  teardown_node18-cov:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Enumerate line counts
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(a=1;a<=8;a++)for(b=1;b<=15906;b++)s+=a*b;print s}'; true ; } > /tmp/data/ckpt-alt.state
+            echo "staging complete; file length=$(wc -c </tmp/data/ckpt-alt.state)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - ckpt-alt.state
+  node18-cov:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/ckpt-alt.state || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  cleanup_edge-v4:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Rotate build log
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 132094 | awk 'NR>12484 && NR<50708{s+=$1}END{print s}'; true ; } > /tmp/data/.ready
+            echo "staging complete; file length=$(wc -c </tmp/data/.ready)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - .ready
+  edge-v4:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  round2_ShipSuite:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Mirror config bundle
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; ( for i in $(seq 1 3330); do echo "row-$i-$RANDOM"; done ) | md5sum; true ; } > /tmp/data/24.bin
+            echo "staging complete; file length=$(wc -c </tmp/data/24.bin)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 24.bin
+  ShipSuite:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  preflight_dotnet8-vet:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Build adjacency map
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 144364 | awk '{if($1%2)o++;else e++}END{print o"/"e}'; true ; } > /tmp/data/gate-ready.sig
+            echo "staging complete; file length=$(wc -c </tmp/data/gate-ready.sig)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - gate-ready.sig
+  dotnet8-vet:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  prep_validate-quick-regression-suite:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Expand parameter grid
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; tr -dc '0-9' </dev/urandom | head -c 2764800 | wc -c; true ; } > /tmp/data/artifact
+            echo "staging complete; file length=$(wc -c </tmp/data/artifact)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - artifact
+  validate-quick-regression-suite:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/artifact || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  syncer_all-greens:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Rank query plans
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 42680 | awk '{if($1%2)o++;else e++}END{print o"/"e}'; true ; } > /tmp/data/artifact.tgz
+            echo "staging complete; file length=$(wc -c </tmp/data/artifact.tgz)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - artifact.tgz
+  all-greens:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  orchestrate_aug27-rev:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Fold data streams
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; head -c 11534336 /dev/urandom | od -An -x | wc -w; true ; } > /tmp/data/handoff.sig
+            echo "staging complete; file length=$(wc -c </tmp/data/handoff.sig)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - handoff.sig
+  aug27-rev:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/handoff.sig || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  D_Deploy_Service5:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Compute spill delta
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 102808 | awk 'NR%17==0{sum+=$1}END{print sum}'; true ; } > /tmp/data/gate-done.log
+            echo "staging complete; file length=$(wc -c </tmp/data/gate-done.log)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - gate-done.log
+  Deploy_Service5:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  resync_ship-it:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Pack vendor fragments
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; dd if=/dev/zero bs=1M count=6 2>/dev/null | sha256sum; true ; } > /tmp/data/44.out
+            echo "staging complete; file length=$(wc -c </tmp/data/44.out)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 44.out
+  ship-it:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/44.out || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  package_qi-ship:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Fold integer series
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; head -c 28311552 /dev/urandom | tar cz - 2>/dev/null | wc -c; true ; } > /tmp/data/checkpoint-B.pt
+            echo "staging complete; file length=$(wc -c </tmp/data/checkpoint-B.pt)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - checkpoint-B.pt
+  qi-ship:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  Gamma_luna-test:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Normalize counter rings
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; dd if=/dev/zero bs=1M count=5 2>/dev/null | gzip -9 | wc -c; true ; } > /tmp/data/step-ok.out
+            echo "staging complete; file length=$(wc -c </tmp/data/step-ok.out)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - step-ok.out
+  luna-test:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/step-ok.out || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  prep_blast-off:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Churn allocator pool
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; awk 'BEGIN{for(i=1;i<=147628;i++){x=sqrt(i);y=int(x);if(y*y==i)c++}print c}'; true ; } > /tmp/data/checkpoint-alt.pickle
+            echo "staging complete; file length=$(wc -c </tmp/data/checkpoint-alt.pickle)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - checkpoint-alt.pickle
+  blast-off:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/checkpoint-alt.pickle || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+  produce_sirius-plus:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Collate adjacent chunks
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 24000 | awk '{for(i=1;i<=5;i++)s+=$1*i}END{print s}'; true ; } > /tmp/data/.lock
+            echo "staging complete; file length=$(wc -c </tmp/data/.lock)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - .lock
+  sirius-plus:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large.gen2
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Review handoff
+          command: |
+            du -b /tmp/data/gate-done.log || true
+      - run:
+          name: Clone workspace
+          command: git clone --depth 3 --no-single-branch --filter=tree:0 https://github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME .
+      - run:
+          name: Unpack bundle
+          command: tar --extract --xz -f static.tar.xz
+      - run:
+          command: ls -la
+      - run:
+          name: Store metadata
+          no_output_timeout: 15m
+          command: sleep 120
+      - run:
+          no_output_timeout: 69m
+          command: exec ./build-run
+
+  reset_fix-6356_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: Index byte offsets
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; tr -dc 'A-F0-9' </dev/urandom | head -c 409600 | fold -w8 | sort -u | wc -l; true ; } > /tmp/data/pt-alt.pt
+            echo "staging complete; file length=$(wc -c </tmp/data/pt-alt.pt)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - pt-alt.pt
+  step2_java17-release_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Validate checksum roster
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; head -c 10485760 /dev/urandom | md5sum; true ; } > /tmp/data/step-27.out
+            echo "staging complete; file length=$(wc -c </tmp/data/step-27.out)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - step-27.out
+  fetcher_ship-it_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Scan vector span
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 29000 | awk '{for(i=1;i<=5;i++)s+=$1*i}END{print s}'; true ; } > /tmp/data/44.out
+            echo "staging complete; file length=$(wc -c </tmp/data/44.out)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 44.out
+  validate_aug27-rev_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Trim trailing newlines
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; tr -dc 'a-z0-9 ' </dev/urandom | head -c 921600 | tr ' ' '\n' | sort | uniq | wc -l; true ; } > /tmp/data/handoff.sig
+            echo "staging complete; file length=$(wc -c </tmp/data/handoff.sig)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - handoff.sig
+  phase1_node18-cov_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Checkpoint window frame
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; head -c 16777216 /dev/urandom | od -An -x | wc -w; true ; } > /tmp/data/ckpt-alt.state
+            echo "staging complete; file length=$(wc -c </tmp/data/ckpt-alt.state)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - ckpt-alt.state
+  stage_verify-partial-docker-image_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Reduce row partitions
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; yes "x$RANDOM" | head -n 282340 | md5sum; true ; } > /tmp/data/stats.jsonl
+            echo "staging complete; file length=$(wc -c </tmp/data/stats.jsonl)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - stats.jsonl
+  loader_validate-quick-regression-suite_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Enumerate scalar triples
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 62944 | awk '{s+=$1}END{print s}'; true ; } > /tmp/data/artifact
+            echo "staging complete; file length=$(wc -c </tmp/data/artifact)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - artifact
+  tester_luna-test_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Build summary row
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; yes 'line' | head -n 494207 | awk '{print NR, $0}' | tail -1; true ; } > /tmp/data/step-ok.out
+            echo "staging complete; file length=$(wc -c </tmp/data/step-ok.out)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - step-ok.out
+  rerun_papa-3_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Measure entropy sample
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 174348 | awk 'END{print NR}'; true ; } > /tmp/data/audit.log
+            echo "staging complete; file length=$(wc -c </tmp/data/audit.log)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - audit.log
+  auditor_kilo_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Fingerprint vendor tree
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; tr -dc 'A-F0-9' </dev/urandom | head -c 1433600 | fold -w8 | sort -u | wc -l; true ; } > /tmp/data/150.txt
+            echo "staging complete; file length=$(wc -c </tmp/data/150.txt)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 150.txt
+  stepB_node20-bench_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Mint batch marker
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 6000 | awk '{for(i=1;i<=5;i++)s+=$1*i}END{print s}'; true ; } > /tmp/data/2024-08-24.data
+            echo "staging complete; file length=$(wc -c </tmp/data/2024-08-24.data)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - 2024-08-24.data
+  vendor_india-4_2:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - attach_workspace:
+          at: /tmp/data
+      - run:
+          name: Measure throughput
+          command: |
+            mkdir -p /tmp/data
+            { set +o pipefail 2>/dev/null; seq 1 17000 | awk '{for(i=1;i<=5;i++)s+=$1*i}END{print s}'; true ; } > /tmp/data/stage.bin
+            echo "staging complete; file length=$(wc -c </tmp/data/stage.bin)"
+      - persist_to_workspace:
+          root: /tmp/data
+          paths:
+            - stage.bin
+workflows:
+  test:
+    jobs:
+      - D_Deploy_Service5
+      - teardown_fix-retry-glitch
+      - Deploy_Service5:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - fix-retry-glitch:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - titan2-rc:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - ShipSuite:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - q2-cleanup:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - edge-v4:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - qi-ship:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - sirius-plus:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - t-new:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - dotnet8-vet:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - all-greens:
+          requires:
+            - D_Deploy_Service5
+            - teardown_fix-retry-glitch
+      - postcheck_fix-6356
+      - reset_fix-6356_2:
+          requires:
+            - postcheck_fix-6356
+      - fix-6356:
+          requires:
+            - reset_fix-6356_2
+      - bundle_java17-release:
+          requires:
+            - reset_fix-6356_2
+      - step2_java17-release_2:
+          requires:
+            - bundle_java17-release
+      - java17-release:
+          requires:
+            - step2_java17-release_2
+      - resync_ship-it:
+          requires:
+            - step2_java17-release_2
+      - fetcher_ship-it_2:
+          requires:
+            - resync_ship-it
+      - ship-it:
+          requires:
+            - fetcher_ship-it_2
+      - orchestrate_aug27-rev:
+          requires:
+            - fetcher_ship-it_2
+      - validate_aug27-rev_2:
+          requires:
+            - orchestrate_aug27-rev
+      - aug27-rev:
+          requires:
+            - validate_aug27-rev_2
+      - teardown_node18-cov:
+          requires:
+            - validate_aug27-rev_2
+      - phase1_node18-cov_2:
+          requires:
+            - teardown_node18-cov
+      - node18-cov:
+          requires:
+            - phase1_node18-cov_2
+      - compile_verify-partial-docker-image:
+          requires:
+            - phase1_node18-cov_2
+      - stage_verify-partial-docker-image_2:
+          requires:
+            - compile_verify-partial-docker-image
+      - verify-partial-docker-image:
+          requires:
+            - stage_verify-partial-docker-image_2
+      - prep_validate-quick-regression-suite:
+          requires:
+            - stage_verify-partial-docker-image_2
+      - loader_validate-quick-regression-suite_2:
+          requires:
+            - prep_validate-quick-regression-suite
+      - validate-quick-regression-suite:
+          requires:
+            - loader_validate-quick-regression-suite_2
+      - Gamma_luna-test:
+          requires:
+            - loader_validate-quick-regression-suite_2
+      - tester_luna-test_2:
+          requires:
+            - Gamma_luna-test
+      - luna-test:
+          requires:
+            - tester_luna-test_2
+      - reup_papa-3:
+          requires:
+            - tester_luna-test_2
+      - rerun_papa-3_2:
+          requires:
+            - reup_papa-3
+      - papa-3:
+          requires:
+            - rerun_papa-3_2
+      - phase1_kilo:
+          requires:
+            - rerun_papa-3_2
+      - auditor_kilo_2:
+          requires:
+            - phase1_kilo
+      - kilo:
+          requires:
+            - auditor_kilo_2
+      - go_node20-bench:
+          requires:
+            - auditor_kilo_2
+      - stepB_node20-bench_2:
+          requires:
+            - go_node20-bench
+      - node20-bench:
+          requires:
+            - stepB_node20-bench_2
+      - preflight_india-4:
+          requires:
+            - stepB_node20-bench_2
+      - vendor_india-4_2:
+          requires:
+            - preflight_india-4
+      - india-4:
+          requires:
+            - vendor_india-4_2
+      - do_polaris-rev
+      - polaris-rev:
+          requires:
+            - do_polaris-rev
+      - redo_succes-only:
+          requires:
+            - do_polaris-rev
+      - succes-only:
+          requires:
+            - redo_succes-only
+      - prep_blast-off:
+          requires:
+            - redo_succes-only
+      - blast-off:
+          requires:
+            - prep_blast-off
+      - fixture_run-nightly-docker-image:
+          requires:
+            - prep_blast-off
+      - run-nightly-docker-image:
+          requires:
+            - fixture_run-nightly-docker-image
+      - bake_sirius-beta
+      - sirius-beta:
+          requires:
+            - bake_sirius-beta
+      - ctx_callisto-final:
+          requires:
+            - bake_sirius-beta
+      - callisto-final:
+          requires:
+            - ctx_callisto-final
+      - rerun_LAB_DEPLOY_8:
+          requires:
+            - ctx_callisto-final
+      - LAB_DEPLOY_8:
+          requires:
+            - rerun_LAB_DEPLOY_8
